@@ -33,26 +33,28 @@ public class ReserveStock
         var reserverStock = JsonConvert
             .DeserializeObject<List<OrderDto>>(orderReservationJson);
 
-        if (reserverStock is not null
-            && reserverStock.Any())
+        if (reserverStock is null
+            || reserverStock.Any())
         {
-            try
-            {
-                var reservationId = await UploadOrderReservationJson(_configuration["OrderReservationsContainer"], 
-                    orderReservationJson);
+            log.LogError($"{nameof(reserverStock)} failed on bad input: {orderReservationJson}");
 
-                log.LogInformation($"New order reservation: {reservationId}");
-
-                return new OkObjectResult(reservationId);
-            }
-            catch (Exception ex)
-            {
-                log.LogError(ex, "Failed to reserve stock");
-                return new ExceptionResult(ex, true);
-            }
+            return new UnprocessableEntityResult();
         }
 
-        return new UnprocessableEntityResult();
+        try
+        {
+            var reservationId = await UploadOrderReservationJson(_configuration["OrderReservationsContainer"], 
+                orderReservationJson);
+
+            log.LogInformation($"New order reservation: {reservationId}");
+
+            return new OkObjectResult(reservationId);
+        }
+        catch (Exception ex)
+        {
+            log.LogError(ex, "Failed to reserve stock");
+            return new ExceptionResult(ex, true);
+        }
     }
 
     public async Task<string> UploadOrderReservationJson(string containerName, string json)

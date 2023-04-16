@@ -1,14 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net.Http;
-using System.Net.Http.Json;
+﻿using System.Linq;
 using System.Threading.Tasks;
 using Ardalis.GuardClauses;
 using Microsoft.eShopWeb.ApplicationCore.Entities;
 using Microsoft.eShopWeb.ApplicationCore.Entities.BasketAggregate;
 using Microsoft.eShopWeb.ApplicationCore.Entities.OrderAggregate;
-using Microsoft.eShopWeb.ApplicationCore.Exceptions;
 using Microsoft.eShopWeb.ApplicationCore.Interfaces;
 using Microsoft.eShopWeb.ApplicationCore.Specifications;
 
@@ -20,19 +15,22 @@ public class OrderService : IOrderService
     private readonly IUriComposer _uriComposer;
     private readonly IRepository<Basket> _basketRepository;
     private readonly IRepository<CatalogItem> _itemRepository;
-    private readonly HttpClient _httpClient;
+    private readonly IStockReservationService _stockReservationService;
+    private readonly IDeliveryOrderService _deliveryOrderService;
 
     public OrderService(IRepository<Basket> basketRepository,
         IRepository<CatalogItem> itemRepository,
         IRepository<Order> orderRepository,
         IUriComposer uriComposer,
-        HttpClient httpClient)
+        IStockReservationService stockReservationService,
+        IDeliveryOrderService deliveryOrderService)
     {
         _orderRepository = orderRepository;
         _uriComposer = uriComposer;
         _basketRepository = basketRepository;
         _itemRepository = itemRepository;
-        _httpClient = httpClient;
+        _stockReservationService = stockReservationService;
+        _deliveryOrderService = deliveryOrderService;
     }
 
     public async Task CreateOrderAsync(int basketId, Address shippingAddress)
@@ -57,39 +55,7 @@ public class OrderService : IOrderService
         var order = new Order(basket.BuyerId, shippingAddress, items);
 
         await _orderRepository.AddAsync(order);
-        await ReserverStock(order);
-    }
-
-    private async Task ReserverStock(Order order)
-    {
-        List<OrderItemDto> reserveItems = new List<OrderItemDto>();
-        foreach (var item in order.OrderItems)
-        {
-            reserveItems.Add(new OrderItemDto
-            {
-                CatalogItemId = item.ItemOrdered.CatalogItemId,
-                ProductName = item.ItemOrdered.ProductName,
-                Quantity = item.Units
-            });
-        }
-
-        await SendRequestToOrderItemsReserverService(reserveItems);
-    }
-
-    private async Task SendRequestToOrderItemsReserverService(List<OrderItemDto> reserveItems)
-    {
-        var httpRequestMessage 
-            = new HttpRequestMessage(HttpMethod.Post, _httpClient.BaseAddress)
-        {
-            Content = JsonContent.Create(reserveItems)
-        };
-
-        HttpResponseMessage response = await _httpClient.SendAsync(httpRequestMessage);
-        
-        if(!response.IsSuccessStatusCode)
-        {
-            throw new OrderItemsReserverException(
-                $"OrderItemsReserver endpoint call failure: {response.StatusCode}");
-        }
+        await _stockReservationService.ReserverStock(order);
+        await _deliveryOrderService.PostOrderToDeliveryDepartment(order);
     }
 }

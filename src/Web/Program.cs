@@ -44,13 +44,22 @@ builder.Configuration.AddEnvironmentVariables();
 builder.Services.AddCoreServices(builder.Configuration);
 builder.Services.AddWebServices(builder.Configuration);
 
-// HttpClient factory for calling the OrderItemsReserver Azure Function
+// HttpClient factory for calling the OrderItemsReserver's ReserverStock Azure Function
 
-builder.Services.AddHttpClient<IOrderService, OrderService>(client =>
+builder.Services.AddHttpClient<IStockReservationService, StockReservationService>(client =>
 {
     client.BaseAddress = new Uri(builder.Configuration["OrderItemsReserverUrl"] 
         ?? throw new InvalidOperationException("OrderItemsReserverUrl cannot be null"));
 });
+
+// HttpClient factory for calling the DeliveryOrderProcessor's AddOrderDelivery Azure Function 
+
+builder.Services.AddHttpClient<IDeliveryOrderService, DeliveryOrderService>(client =>
+{
+    client.BaseAddress = new Uri(builder.Configuration["DeliveryOrderProcessorUrl"]
+        ?? throw new InvalidOperationException("DeliveryOrderProcessorUrl cannot be null"));
+});
+
 
 // Add memory cache services
 builder.Services.AddMemoryCache();
