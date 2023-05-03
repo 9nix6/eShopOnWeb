@@ -1,36 +1,37 @@
-﻿using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Azure.WebJobs;
-using Microsoft.Azure.WebJobs.Extensions.Http;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
-using System.Collections.Generic;
-using OrderItemsReserver.Models;
+﻿// Default URL for triggering event grid function in the local environment.
+// http://localhost:7071/runtime/webhooks/EventGrid?functionName={functionname}
 using System;
-using Azure.Storage.Blobs;
-using System.Linq;
+using Microsoft.Azure.WebJobs;
+using Microsoft.Azure.WebJobs.Extensions.EventGrid;
+using Microsoft.Extensions.Logging;
+using Azure.Messaging.EventGrid;
 using Microsoft.Extensions.Configuration;
-using System.Web.Http;
+using Newtonsoft.Json;
+using OrderItemsReserver.Models;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using Azure.Core;
+using Azure.Storage.Blobs;
 
 namespace OrderItemsReserver;
 
-public class ReserveStock
+public class ReserveStockUsingEventGridTrigger
 {
     private readonly IConfiguration _configuration;
 
-    public ReserveStock(IConfiguration configuration)
+    public ReserveStockUsingEventGridTrigger(IConfiguration configuration)
     {
         _configuration = configuration;
     }
 
-    [FunctionName("ReserveStock")]
-    public async Task<IActionResult> Run(
-        [HttpTrigger(AuthorizationLevel.Function, "post", Route = null)] HttpRequest req,
-        ILogger log)
+
+    [FunctionName("ReserveStockUsingEventGridTrigger")]
+    public async Task Run([EventGridTrigger] EventGridEvent eventGridEvent, ILogger log)
     {
-        var orderReservationJson = await req.ReadAsStringAsync();
+        log.LogInformation($"Event grid trigger with Data: {eventGridEvent.Data}");
+
+        var orderReservationJson = eventGridEvent.Data.ToString();
         var reserverStock = JsonConvert
             .DeserializeObject<List<OrderDto>>(orderReservationJson);
 
@@ -38,23 +39,19 @@ public class ReserveStock
             || reserverStock.Any())
         {
             log.LogError($"{nameof(reserverStock)} failed on bad input: {orderReservationJson}");
-
-            return new UnprocessableEntityResult();
+            return;
         }
 
         try
         {
-            var reservationId = await UploadOrderReservationJson(_configuration["OrderReservationsContainer"], 
+            var reservationId = await UploadOrderReservationJson(_configuration["OrderReservationsContainer"],
                 orderReservationJson);
 
             log.LogInformation($"New order reservation: {reservationId}");
-
-            return new OkObjectResult(reservationId);
         }
         catch (Exception ex)
         {
             log.LogError(ex, "Failed to reserve stock");
-            return new ExceptionResult(ex, true);
         }
     }
 
@@ -73,7 +70,7 @@ public class ReserveStock
             }
         };
 
-        BlobContainerClient containerClient = new(_configuration["AzureWebJobsStorage"], 
+        BlobContainerClient containerClient = new(_configuration["AzureWebJobsStorage"],
             containerName,
             blobClientOptions);
 

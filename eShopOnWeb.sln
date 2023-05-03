@@ -43,7 +43,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PublicApiIntegrationTests",
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OrderItemsReserver", "src\OrderItemsReserver\OrderItemsReserver.csproj", "{8AAA7407-A164-47FA-BE37-B9A8A7153B7A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DeliveryOrderProcessor", "src\DeliveryOrderProcessor\DeliveryOrderProcessor.csproj", "{12313C20-5826-4031-9D47-3C7FE9CC95FC}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DeliveryOrderProcessor", "src\DeliveryOrderProcessor\DeliveryOrderProcessor.csproj", "{12313C20-5826-4031-9D47-3C7FE9CC95FC}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

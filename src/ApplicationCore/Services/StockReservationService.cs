@@ -6,15 +6,22 @@ using Microsoft.eShopWeb.ApplicationCore.Entities.OrderAggregate;
 using Microsoft.eShopWeb.ApplicationCore.Entities;
 using Microsoft.eShopWeb.ApplicationCore.Exceptions;
 using Microsoft.eShopWeb.ApplicationCore.Interfaces;
+using System;
+using Azure.Messaging.EventGrid;
+using Azure.Core.Extensions;
+using Microsoft.Extensions.Configuration;
+using Azure.Identity;
+using Azure.Core.Serialization;
+using System.Text.Json;
 
 namespace Microsoft.eShopWeb.ApplicationCore.Services;
 public class StockReservationService : IStockReservationService
 {
-    private readonly HttpClient _httpClient;
+    private readonly IConfiguration _configuration;
 
-    public StockReservationService(HttpClient httpClient)
+    public StockReservationService(IConfiguration configuration)
     {
-        _httpClient = httpClient;
+        _configuration = configuration;
     }
 
     public async Task ReserverStock(Order order)
@@ -30,23 +37,28 @@ public class StockReservationService : IStockReservationService
             });
         }
 
-        await SendRequestToOrderItemsReserverService(reserveItems);
+        await SendOrderReservationEvent(reserveItems);
     }
 
-    private async Task SendRequestToOrderItemsReserverService(List<OrderItemDto> reserveItems)
+    private async Task SendOrderReservationEvent(List<OrderItemDto> reserveItems)
     {
-        var httpRequestMessage
-            = new HttpRequestMessage(HttpMethod.Post, _httpClient.BaseAddress)
-            {
-                Content = JsonContent.Create(reserveItems)
-            };
+        const string EventGridEndpoint = "https://artur-eshop-topic.westeurope-1.eventgrid.azure.net/api/events";
 
-        HttpResponseMessage response = await _httpClient.SendAsync(httpRequestMessage);
+        EventGridPublisherClient client = new EventGridPublisherClient(
+            new Uri(EventGridEndpoint),//_configuration["EventHubTopicEnpoint"]),
+            new DefaultAzureCredential());
 
-        if (!response.IsSuccessStatusCode)
+        List<EventGridEvent> eventsList = new List<EventGridEvent>();
+        foreach (var item in reserveItems) 
         {
-            throw new StockReservationServiceException(
-                $"OrderItemsReserver endpoint call failure: {response.StatusCode}");
+            eventsList.Add(new EventGridEvent(
+                "ReserveStockRequest",
+                "OrderReservation",
+                "1.0",
+                item));
         }
+
+        // Send the events
+        await client.SendEventsAsync(eventsList);
     }
 }
