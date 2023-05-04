@@ -13,6 +13,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Azure.Core;
 using Azure.Storage.Blobs;
+using Azure.Identity;
 
 namespace OrderItemsReserver;
 
@@ -33,10 +34,9 @@ public class ReserveStockUsingEventGridTrigger
 
         var orderReservationJson = eventGridEvent.Data.ToString();
         var reserverStock = JsonConvert
-            .DeserializeObject<List<OrderDto>>(orderReservationJson);
+            .DeserializeObject<OrderDto>(orderReservationJson);
 
-        if (reserverStock is null
-            || reserverStock.Any())
+        if (reserverStock is null)
         {
             log.LogError($"{nameof(reserverStock)} failed on bad input: {orderReservationJson}");
             return;
@@ -51,7 +51,9 @@ public class ReserveStockUsingEventGridTrigger
         }
         catch (Exception ex)
         {
-            log.LogError(ex, "Failed to reserve stock");
+            log.LogError(ex, "Failed to reserve stock: {0}", orderReservationJson);
+
+            await SendOrderReservationEvent(orderReservationJson);
         }
     }
 
@@ -82,4 +84,23 @@ public class ReserveStockUsingEventGridTrigger
 
         return reservationId;
     }
+
+    private async Task SendOrderReservationEvent(string reserveItemsJson)
+    {
+        if (string.IsNullOrEmpty(_configuration["EventHubTopicEnpoint"]))
+        {
+            throw new InvalidOperationException("Event Grid endpoint is not set.");
+        }
+
+        EventGridPublisherClient client = new EventGridPublisherClient(
+            new Uri(_configuration["EventHubTopicEnpoint"]!),
+            new DefaultAzureCredential());
+
+        await client.SendEventAsync(new EventGridEvent(
+                "ReserveStockRequest",
+                "OrderReservationEmail",
+                "1.0",
+                reserveItemsJson));
+    }
+
 }

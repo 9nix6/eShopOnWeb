@@ -30,20 +30,20 @@ public class ReserveStock
         [HttpTrigger(AuthorizationLevel.Function, "post", Route = null)] HttpRequest req,
         ILogger log)
     {
-        var orderReservationJson = await req.ReadAsStringAsync();
-        var reserverStock = JsonConvert
-            .DeserializeObject<List<OrderDto>>(orderReservationJson);
-
-        if (reserverStock is null
-            || reserverStock.Any())
-        {
-            log.LogError($"{nameof(reserverStock)} failed on bad input: {orderReservationJson}");
-
-            return new UnprocessableEntityResult();
-        }
-
         try
         {
+            var orderReservationJson = await req.ReadAsStringAsync();
+            var reserverStock = JsonConvert
+                .DeserializeObject<List<OrderDto>>(orderReservationJson);
+
+            if (reserverStock is null
+                || reserverStock.Any())
+            {
+                log.LogError($"{nameof(reserverStock)} failed on bad input: {orderReservationJson}");
+
+                return new UnprocessableEntityResult();
+            }
+
             var reservationId = await UploadOrderReservationJson(_configuration["OrderReservationsContainer"], 
                 orderReservationJson);
 

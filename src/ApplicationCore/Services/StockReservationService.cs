@@ -37,15 +37,18 @@ public class StockReservationService : IStockReservationService
             });
         }
 
-        await SendOrderReservationEvent(reserveItems);
+        await SendOrderReservationEvent(reserveItems); 
     }
 
     private async Task SendOrderReservationEvent(List<OrderItemDto> reserveItems)
     {
-        const string EventGridEndpoint = "https://artur-eshop-topic.westeurope-1.eventgrid.azure.net/api/events";
+        if(string.IsNullOrEmpty(_configuration["EventHubTopicEnpoint"]))
+        {
+            throw new InvalidOperationException("Event Grid endpoint is not set.");
+        }
 
         EventGridPublisherClient client = new EventGridPublisherClient(
-            new Uri(EventGridEndpoint),//_configuration["EventHubTopicEnpoint"]),
+            new Uri(_configuration["EventHubTopicEnpoint"]!),
             new DefaultAzureCredential());
 
         List<EventGridEvent> eventsList = new List<EventGridEvent>();

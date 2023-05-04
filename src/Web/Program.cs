@@ -46,11 +46,11 @@ builder.Services.AddWebServices(builder.Configuration);
 
 // HttpClient factory for calling the OrderItemsReserver's ReserverStock Azure Function
 
-builder.Services.AddHttpClient<IStockReservationService, StockReservationService>(client =>
-{
-    client.BaseAddress = new Uri(builder.Configuration["OrderItemsReserverUrl"] 
-        ?? throw new InvalidOperationException("OrderItemsReserverUrl cannot be null"));
-});
+//builder.Services.AddHttpClient<IStockReservationService, StockReservationService>(client =>
+//{
+//    client.BaseAddress = new Uri(builder.Configuration["OrderItemsReserverUrl"] 
+//        ?? throw new InvalidOperationException("OrderItemsReserverUrl cannot be null"));
+//});
 
 // HttpClient factory for calling the DeliveryOrderProcessor's AddOrderDelivery Azure Function 
 
@@ -109,6 +109,7 @@ builder.Services.AddServerSideBlazor();
 builder.Services.AddScoped<ToastService>();
 builder.Services.AddScoped<HttpService>();
 builder.Services.AddBlazorServices();
+builder.Services.AddScoped<IStockReservationService, StockReservationService>();
 
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
