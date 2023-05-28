@@ -5,6 +5,7 @@ using BlazorAdmin.Services;
 using Blazored.LocalStorage;
 using BlazorShared;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.ApplicationModels;
@@ -18,6 +19,17 @@ using Microsoft.eShopWeb.Web.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 var builder = WebApplication.CreateBuilder(args);
+
+//// Add CORS configuration
+//builder.Services.AddCors(options =>
+//{
+//    options.AddDefaultPolicy(builder =>
+//    {
+//        builder.AllowAnyOrigin()
+//               .AllowAnyMethod()
+//               .AllowAnyHeader();
+//    });
+//});
 
 builder.Logging.AddConsole();
 
@@ -84,6 +96,21 @@ builder.Services.AddScoped<HttpClient>(s => new HttpClient
 {
     BaseAddress = new Uri(baseUrlConfig!.WebBase)
 });
+
+//builder.Services.AddScoped(sp =>
+//{
+//    var httpClient = new HttpClient(new HttpClientHandler { AllowAutoRedirect = true })
+//    {
+//        BaseAddress = new Uri(baseUrlConfig!.WebBase)
+//    };
+
+//    // Enable CORS
+//    httpClient.DefaultRequestHeaders.Add("Access-Control-Allow-Origin", "*");
+//    httpClient.DefaultRequestHeaders.Add("Access-Control-Allow-Methods", "*");
+//    httpClient.DefaultRequestHeaders.Add("Access-Control-Allow-Headers", "*");
+
+//    return httpClient;
+//});
 
 // add blazor services
 builder.Services.AddBlazoredLocalStorage();
@@ -167,6 +194,7 @@ app.UseBlazorFrameworkFiles();
 app.UseStaticFiles();
 app.UseRouting();
 
+//app.UseCors();
 app.UseCookiePolicy();
 app.UseAuthentication();
 app.UseAuthorization();

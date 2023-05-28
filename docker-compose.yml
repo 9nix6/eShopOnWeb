@@ -2,14 +2,16 @@ version: '3.4'
 
 services:
   eshopwebmvc:
-    image: ${DOCKER_REGISTRY-}eshopwebmvc
+    image: arturcreg.azurecr.io/eshopwebmvc:v1
     build:
       context: .
       dockerfile: src/Web/Dockerfile
     depends_on:
       - "sqlserver"
+    ports:
+      - 80:80
   eshoppublicapi:
-    image: ${DOCKER_REGISTRY-}eshoppublicapi
+    image: arturcreg.azurecr.io/eshoppublicapi:v1
     build:
       context: .
       dockerfile: src/PublicApi/Dockerfile
