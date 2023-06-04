@@ -6,8 +6,11 @@
   <ItemGroup>
     <PackageReference Include="Azure.Identity" />
     <PackageReference Include="Azure.Storage.Blobs" />
+    <PackageReference Include="Microsoft.Azure.Cosmos" />
+    <PackageReference Include="Microsoft.Azure.Functions.Extensions" />
     <PackageReference Include="Microsoft.Azure.WebJobs.Extensions.CosmosDB" />
     <PackageReference Include="Microsoft.Azure.WebJobs.Extensions.EventGrid" />
+    <PackageReference Include="Microsoft.Azure.WebJobs.Extensions.ServiceBus" />
     <PackageReference Include="Microsoft.NET.Sdk.Functions" />
   </ItemGroup>
   <ItemGroup>

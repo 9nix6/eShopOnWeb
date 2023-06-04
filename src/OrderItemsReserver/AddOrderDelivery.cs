@@ -35,7 +35,9 @@ public class AddOrderDelivery
                 PropertyNameCaseInsensitive = true
             });
 
-        if (InvalidDeliveryOrder(deliveryOrder))
+        if (deliveryOrder is null 
+            || !deliveryOrder.Items.Any() 
+            || deliveryOrder.FinalPrice <= 0)
         {
             log.LogError($"{nameof(AddOrderDelivery)} failed on bad input: {deliveryOrderJson}");
 
@@ -56,12 +58,5 @@ public class AddOrderDelivery
             return new BadRequestObjectResult($"Failed to create item. Cosmos Status Code {cosmosException.StatusCode}, " +
                 $"Sub Status Code {cosmosException.SubStatusCode}: {cosmosException.Message}.");
         }
-    }
-
-    private bool InvalidDeliveryOrder(DeliveryOrderDto deliveryOrder)
-    {
-        return (deliveryOrder is null
-            || !deliveryOrder.Items.Any()
-            || deliveryOrder.FinalPrice <= 0);
     }
 }

@@ -1,14 +1,13 @@
 ﻿using System;
-using System.Net.Http;
-using DeliveryOrderProcessor;
 using Microsoft.Azure.Cosmos.Fluent;
 using Microsoft.Azure.Functions.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using OrderItemsReserver;
 
 [assembly: FunctionsStartup(typeof(Startup))]
 
-namespace DeliveryOrderProcessor;
+namespace OrderItemsReserver;
 
 public class Startup : FunctionsStartup
 {
@@ -22,18 +21,16 @@ public class Startup : FunctionsStartup
     {
         builder.Services.AddSingleton((s) =>
         {
-            string connectionString = _configuration["CosmosDbConnectionString"];
+            var connectionString = _configuration["CosmosDbConnectionString"];
             if (string.IsNullOrEmpty(connectionString))
             {
                 throw new ArgumentNullException(connectionString);
             }
 
             CosmosClientBuilder configurationBuilder = new(connectionString);
-            
+
             return configurationBuilder
                     .Build();
         });
-
-        builder.Services.AddScoped(s => new HttpClient());
     }
 }

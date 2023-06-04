@@ -55,7 +55,7 @@ public class OrderService : IOrderService
         var order = new Order(basket.BuyerId, shippingAddress, items);
 
         await _orderRepository.AddAsync(order);
-        await _stockReservationService.ReserverStock(order);
+        await _stockReservationService.ReserverStock(order); 
         await _deliveryOrderService.PostOrderToDeliveryDepartment(order);
     }
 }

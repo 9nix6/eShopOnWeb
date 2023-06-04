@@ -1,17 +1,11 @@
 ﻿using System.Collections.Generic;
-using System.Net.Http.Json;
-using System.Net.Http;
 using System.Threading.Tasks;
 using Microsoft.eShopWeb.ApplicationCore.Entities.OrderAggregate;
 using Microsoft.eShopWeb.ApplicationCore.Entities;
-using Microsoft.eShopWeb.ApplicationCore.Exceptions;
 using Microsoft.eShopWeb.ApplicationCore.Interfaces;
 using System;
-using Azure.Messaging.EventGrid;
-using Azure.Core.Extensions;
 using Microsoft.Extensions.Configuration;
-using Azure.Identity;
-using Azure.Core.Serialization;
+using Azure.Messaging.ServiceBus;
 using System.Text.Json;
 
 namespace Microsoft.eShopWeb.ApplicationCore.Services;
@@ -37,31 +31,47 @@ public class StockReservationService : IStockReservationService
             });
         }
 
-        await SendOrderReservationEvent(reserveItems); 
+        await SendOrderReservationMessage(reserveItems);
     }
 
-    private async Task SendOrderReservationEvent(List<OrderItemDto> reserveItems)
+    private async Task SendOrderReservationMessage(List<OrderItemDto> reserveItems)
     {
-        if(string.IsNullOrEmpty(_configuration["EventHubTopicEnpoint"]))
+        ArgumentException.ThrowIfNullOrEmpty(_configuration["ServiceBusConnectionString"]);
+        ArgumentException.ThrowIfNullOrEmpty(_configuration["ServiceBusQueueName"]);
+
+        var clientOptions = new ServiceBusClientOptions()
         {
-            throw new InvalidOperationException("Event Grid endpoint is not set.");
+            TransportType = ServiceBusTransportType.AmqpWebSockets
+        };
+
+        ServiceBusClient client = new ServiceBusClient(_configuration["ServiceBusConnectionString"], clientOptions);
+        ServiceBusSender sender = client.CreateSender(_configuration["ServiceBusQueueName"]);
+
+        try
+        {
+            using ServiceBusMessageBatch messageBatch = await BuildMessage(reserveItems, sender);
+
+            await sender.SendMessagesAsync(messageBatch);
+        }
+        finally
+        {
+            await sender.DisposeAsync();
+            await client.DisposeAsync();
+        }
+    }
+
+    private static async Task<ServiceBusMessageBatch> BuildMessage(List<OrderItemDto> reserveItems, ServiceBusSender sender)
+    {
+        ServiceBusMessageBatch messageBatch = await sender.CreateMessageBatchAsync();
+
+        foreach (var item in reserveItems)
+        {
+            if (!messageBatch.TryAddMessage(new ServiceBusMessage(JsonSerializer.Serialize(item))))
+            {
+                throw new Exception($"The message is too large to fit in the batch.");
+            }
         }
 
-        EventGridPublisherClient client = new EventGridPublisherClient(
-            new Uri(_configuration["EventHubTopicEnpoint"]!),
-            new DefaultAzureCredential());
-
-        List<EventGridEvent> eventsList = new List<EventGridEvent>();
-        foreach (var item in reserveItems) 
-        {
-            eventsList.Add(new EventGridEvent(
-                "ReserveStockRequest",
-                "OrderReservation",
-                "1.0",
-                item));
-        }
-
-        // Send the events
-        await client.SendEventsAsync(eventsList);
+        return messageBatch;
     }
 }
